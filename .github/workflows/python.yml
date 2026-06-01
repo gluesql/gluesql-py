@@ -1,19 +1,16 @@
-name: Python
+name: Python CI
 
 on:
   push:
     branches: [main, release-*]
-    paths-ignore:
-      - "docs/**"
   pull_request:
-    paths-ignore:
-      - "docs/**"
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  python_storage_tests:
+  test:
+    name: Build and test Python package
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -28,8 +25,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Check Rust dependencies
-        run: cargo check --locked
+      - name: Check Rust formatting
+        run: cargo fmt --check
+
+      - name: Run Rust lints
+        run: cargo clippy --locked --all-targets --all-features
 
       - name: Build wheel
         run: maturin build --locked
