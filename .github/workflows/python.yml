@@ -28,8 +28,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Check Rust dependencies
+        run: cargo check --locked
+
       - name: Build wheel
-        run: maturin build
+        run: maturin build --locked
 
       - name: Install wheel
         run: pip install --force-reinstall target/wheels/*.whl
