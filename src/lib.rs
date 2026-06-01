@@ -7,7 +7,7 @@ use {
         translate::translate,
     },
     payload::{PyPayload, convert},
-    pyo3::{prelude::*, types::PyString},
+    pyo3::prelude::*,
     storages::{
         PyJsonStorage, PyMemoryStorage, PySharedMemoryStorage, PySledStorage, PySledStorageConfig,
         PySledStorageModeConfig, PyStorageEngine,
@@ -55,14 +55,14 @@ impl PyGlue {
     }
 
     #[tokio::main]
-    pub async fn execute(&mut self, statement: Statement) -> PyResult<Payload> {
+    pub async fn execute(&mut self, statement: &Statement) -> PyResult<Payload> {
         let storage = &mut self.storage;
 
         match storage {
-            PyStorageEngine::Memory(storage) => execute!(storage, &statement),
-            PyStorageEngine::Json(storage) => execute!(storage, &statement),
-            PyStorageEngine::SharedMemory(storage) => execute!(storage, &statement),
-            PyStorageEngine::Sled(storage) => execute!(storage, &statement),
+            PyStorageEngine::Memory(storage) => execute!(storage, statement),
+            PyStorageEngine::Json(storage) => execute!(storage, statement),
+            PyStorageEngine::SharedMemory(storage) => execute!(storage, statement),
+            PyStorageEngine::Sled(storage) => execute!(storage, statement),
         }
     }
 }
@@ -74,26 +74,25 @@ impl PyGlue {
         PyGlue { storage }
     }
 
-    pub fn query(&mut self, py: Python, sql: &PyString) -> PyResult<PyObject> {
-        let sql = sql.to_string();
+    pub fn query(&mut self, py: Python<'_>, sql: &str) -> PyResult<Py<PyAny>> {
         let queries = parse(sql).map_err(|e| GlueSQLError::new_err(e.to_string()))?;
 
         let mut payloads: Vec<PyPayload> = vec![];
-        for query in queries.iter() {
+        for query in &queries {
             let statement = translate(query).map_err(|e| GlueSQLError::new_err(e.to_string()))?;
             let statement = self.plan(statement)?;
 
-            let payload = self.execute(statement)?;
+            let payload = self.execute(&statement)?;
 
             payloads.push(PyPayload { payload });
         }
 
-        Ok(convert(py, payloads))
+        convert(py, payloads)
     }
 }
 
 #[pymodule]
-fn gluesql(py: Python, m: &PyModule) -> PyResult<()> {
+fn gluesql(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyGlue>()?;
     m.add_class::<PyMemoryStorage>()?;
     m.add_class::<PyJsonStorage>()?;

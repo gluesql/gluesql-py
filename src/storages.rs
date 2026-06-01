@@ -1,9 +1,10 @@
 use {
+    crate::error::GlueSQLError,
     gluesql_json_storage::JsonStorage,
     gluesql_memory_storage::MemoryStorage,
     gluesql_shared_memory_storage::SharedMemoryStorage,
     gluesql_sled_storage::{SledStorage, sled},
-    pyo3::{prelude::*, types::PyString},
+    pyo3::prelude::*,
     std::path::PathBuf,
 };
 
@@ -15,7 +16,7 @@ pub enum PyStorageEngine {
     Sled(PySledStorage),
 }
 
-#[pyclass(name = "MemoryStorage")]
+#[pyclass(name = "MemoryStorage", from_py_object)]
 #[derive(Clone, Default)]
 pub struct PyMemoryStorage(pub MemoryStorage);
 
@@ -23,33 +24,33 @@ pub struct PyMemoryStorage(pub MemoryStorage);
 impl PyMemoryStorage {
     #[new]
     pub fn new() -> Self {
-        Default::default()
+        PyMemoryStorage::default()
     }
 
-    pub fn __repr__(&self) -> PyResult<String> {
-        Ok(format!("{:?}", self.0))
+    pub fn __repr__(&self) -> String {
+        format!("{:?}", self.0)
     }
 }
 
-#[pyclass(name = "JsonStorage")]
+#[pyclass(name = "JsonStorage", from_py_object)]
 #[derive(Clone)]
 pub struct PyJsonStorage(pub JsonStorage);
 
 #[pymethods]
 impl PyJsonStorage {
     #[new]
-    pub fn new(path_arg: &PyString) -> Self {
+    pub fn new(path_arg: &str) -> Self {
         let mut path = PathBuf::new();
-        path.push(path_arg.to_string());
+        path.push(path_arg);
         PyJsonStorage(JsonStorage { path })
     }
 
-    pub fn __repr__(&self) -> PyResult<String> {
-        Ok(format!("{:?}", self.0))
+    pub fn __repr__(&self) -> String {
+        format!("{:?}", self.0)
     }
 }
 
-#[pyclass(name = "SharedMemoryStorage")]
+#[pyclass(name = "SharedMemoryStorage", from_py_object)]
 #[derive(Clone, Default)]
 pub struct PySharedMemoryStorage(pub SharedMemoryStorage);
 
@@ -57,24 +58,24 @@ pub struct PySharedMemoryStorage(pub SharedMemoryStorage);
 impl PySharedMemoryStorage {
     #[new]
     pub fn new() -> Self {
-        Default::default()
+        PySharedMemoryStorage::default()
     }
 
-    pub fn __repr__(&self) -> PyResult<String> {
-        Ok(format!("{:?}", self.0))
+    pub fn __repr__(&self) -> String {
+        format!("{:?}", self.0)
     }
 }
 
-#[pyclass(name = "SledStorageConfigMode")]
+#[pyclass(name = "SledStorageConfigMode", from_py_object)]
 #[derive(Clone, Debug)]
 pub struct PySledStorageModeConfig(pub sled::Mode);
 
 #[pymethods]
 impl PySledStorageModeConfig {
-    pub fn __repr__(&self) -> PyResult<String> {
+    pub fn __repr__(&self) -> String {
         match self.0 {
-            sled::Mode::LowSpace => Ok("LowSpace".to_owned()),
-            sled::Mode::HighThroughput => Ok("HighThroughput".to_owned()),
+            sled::Mode::LowSpace => "LowSpace".to_owned(),
+            sled::Mode::HighThroughput => "HighThroughput".to_owned(),
         }
     }
 }
@@ -85,8 +86,9 @@ impl Default for PySledStorageModeConfig {
     }
 }
 
-#[pyclass(name = "SledStorageConfig")]
+#[pyclass(name = "SledStorageConfig", from_py_object)]
 #[derive(Clone, Default, Debug)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct PySledStorageConfig {
     #[pyo3(get, set)]
     pub cache_capacity: u64,
@@ -120,21 +122,22 @@ impl PySledStorageConfig {
         PySledStorageConfig::default()
     }
 
-    pub fn __repr__(&self) -> PyResult<String> {
-        Ok(format!("{:?}", self))
+    pub fn __repr__(&self) -> String {
+        format!("{self:?}")
     }
 }
 
-#[pyclass(name = "SledStorage")]
+#[pyclass(name = "SledStorage", from_py_object)]
 #[derive(Clone)]
 pub struct PySledStorage(pub SledStorage);
 
 #[pymethods]
 impl PySledStorage {
     #[new]
-    pub fn new(path_arg: &PyString) -> PyResult<Self> {
-        let path_str = path_arg.to_str()?;
-        let storage = SledStorage::new(path_str).unwrap();
+    pub fn new(path_arg: &str) -> PyResult<Self> {
+        let storage =
+            SledStorage::new(path_arg).map_err(|e| GlueSQLError::new_err(e.to_string()))?;
+
         Ok(PySledStorage(storage))
     }
 
@@ -150,11 +153,13 @@ impl PySledStorage {
             .temporary(cfg.temporary)
             .use_compression(cfg.use_compression);
 
-        let storage = SledStorage::try_from(sled_cfg).unwrap();
+        let storage =
+            SledStorage::try_from(sled_cfg).map_err(|e| GlueSQLError::new_err(e.to_string()))?;
+
         Ok(PySledStorage(storage))
     }
 
-    pub fn __repr__(&self) -> PyResult<String> {
-        Ok(format!("{:?}", self.0))
+    pub fn __repr__(&self) -> String {
+        format!("{:?}", self.0)
     }
 }
