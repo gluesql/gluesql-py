@@ -1,9 +1,7 @@
-#![cfg(feature = "include-python-workspace")]
-
 use {
     error::GlueSQLError,
     gluesql_core::{
-        plan::StatementPlan,
+        ast::Statement,
         prelude::{Payload, execute, parse},
         store::Planner,
         translate::translate,
@@ -45,7 +43,7 @@ macro_rules! execute {
 
 impl PyGlue {
     #[tokio::main]
-    pub async fn plan(&self, statement: StatementPlan) -> PyResult<StatementPlan> {
+    pub async fn plan(&self, statement: Statement) -> PyResult<Statement> {
         let storage = &self.storage;
 
         match storage {
@@ -57,7 +55,7 @@ impl PyGlue {
     }
 
     #[tokio::main]
-    pub async fn execute(&mut self, statement: StatementPlan) -> PyResult<Payload> {
+    pub async fn execute(&mut self, statement: Statement) -> PyResult<Payload> {
         let storage = &mut self.storage;
 
         match storage {
@@ -83,7 +81,6 @@ impl PyGlue {
         let mut payloads: Vec<PyPayload> = vec![];
         for query in queries.iter() {
             let statement = translate(query).map_err(|e| GlueSQLError::new_err(e.to_string()))?;
-            let statement = statement.into();
             let statement = self.plan(statement)?;
 
             let payload = self.execute(statement)?;

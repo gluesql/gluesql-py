@@ -4,7 +4,6 @@ build-backend = "maturin"
 
 [tool.maturin]
 bindings = "pyo3"
-features = ["include-python-workspace"]
 
 [project]
 name = "gluesql"
@@ -15,3 +14,8 @@ classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",
 ]
+
+[project.urls]
+Homepage = "https://gluesql.org"
+Repository = "https://github.com/gluesql/gluesql-py"
+Documentation = "https://gluesql.org/docs/"

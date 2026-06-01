@@ -8,10 +8,10 @@ To build `gluesql-py`, run below command.
 maturin build
 ```
 
-And to install the builded package, run below command.
+And to install the built package, run below command.
 
 ```
-pip install .
+pip install --force-reinstall target/wheels/*.whl
 ```
 
 ### Test
