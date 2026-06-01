@@ -1,6 +1,8 @@
 use {
     gluesql_core::prelude::Error,
-    pyo3::{create_exception, exceptions::PyException, prelude::*, pyclass::CompareOp},
+    pyo3::{
+        IntoPyObjectExt, create_exception, exceptions::PyException, prelude::*, pyclass::CompareOp,
+    },
 };
 
 #[pyclass(name = "GlueSQLError")]
@@ -10,11 +12,16 @@ create_exception!(gluesql, GlueSQLError, PyException);
 
 #[pymethods]
 impl PyGlueSQLError {
-    pub fn __richcmp__(&self, py: Python, rhs: &PyGlueSQLError, op: CompareOp) -> PyObject {
+    pub fn __richcmp__(
+        &self,
+        py: Python<'_>,
+        rhs: &PyGlueSQLError,
+        op: CompareOp,
+    ) -> PyResult<Py<PyAny>> {
         match op {
-            CompareOp::Eq => (self.0 == rhs.0).into_py(py),
-            CompareOp::Ne => (self.0 != rhs.0).into_py(py),
-            _ => py.NotImplemented(),
+            CompareOp::Eq => (self.0 == rhs.0).into_py_any(py),
+            CompareOp::Ne => (self.0 != rhs.0).into_py_any(py),
+            _ => Ok(py.NotImplemented()),
         }
     }
 

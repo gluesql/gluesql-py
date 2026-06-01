@@ -1,6 +1,6 @@
 use {
     gluesql_core::prelude::{Payload, PayloadVariable},
-    pyo3::{PyObject, Python, pyclass},
+    pyo3::{Py, PyAny, PyResult, Python, pyclass},
     pythonize::pythonize,
     serde_json::{Value as Json, json},
 };
@@ -10,14 +10,16 @@ pub struct PyPayload {
     pub payload: Payload,
 }
 
-pub fn convert(py: Python, payloads: Vec<PyPayload>) -> PyObject {
+pub fn convert(py: Python<'_>, payloads: Vec<PyPayload>) -> PyResult<Py<PyAny>> {
     let payloads = payloads
         .into_iter()
         .map(|var| convert_payload(var.payload))
         .collect();
     let payloads = Json::Array(payloads);
 
-    pythonize(py, &payloads).unwrap()
+    pythonize(py, &payloads)
+        .map(pyo3::Bound::unbind)
+        .map_err(Into::into)
 }
 
 fn convert_payload(payload: Payload) -> Json {
